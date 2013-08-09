@@ -48,6 +48,7 @@
 #include "whirlpool.h"
 #include "tiger.h"
 #include "ripemd.h"
+#include "siphash.h"
 
 #define CRC32_DIGEST_LENGTH       4  // 32 bits
 #define ADLER32_DIGEST_LENGTH     4  // 32 bits
@@ -65,6 +66,7 @@
 #define RIPEMD160_DIGEST_LENGTH  20  // 160 bits
 #define RIPEMD256_DIGEST_LENGTH  32  // 256 bits
 #define RIPEMD320_DIGEST_LENGTH  40  // 320 bits
+#define SIPHASH_DIGEST_LENGTH    16  // 128 bits
 
 // should there be any hash that has a greater block size don't forget to change this!!
 #define MAX_USED_BLOCKSIZE 128
@@ -369,6 +371,21 @@ namespace Mod {
         virtual ~RIPEMD320Hash();
         uint32 DigestSize(void) { return RIPEMD320_DIGEST_LENGTH; }
         const char *GetName(void) { return "RIPEMD320Hash"; }
+    };
+
+    class SipHash : public HashBase
+    {
+    public:
+       SipHash();
+       virtual ~SipHash();
+       void Finalize(void);
+       byte *GetDigest(void) { return _finalized ? &_digest[0] : NULL; }
+       uint32 DigestSize(void) { return SIPHASH_DIGEST_LENGTH; }
+       const char *GetName(void) { return "SipHash";}
+
+    protected:
+       sip_hash_st _ctx;
+       byte _digest[SIPHASH_DIGEST_LENGTH];
     };
 
 

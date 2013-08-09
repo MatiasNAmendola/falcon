@@ -48,10 +48,10 @@ HashBase::~HashBase()
 // this is a helper function used by makeHash() and the hash() convenience function
 FalconData *GetHashByName(String *whichStr)
 {
-    if(!whichStr->compareIgnoreCase("crc32"))
-        return new Mod::HashCarrier<Mod::CRC32>();
-    else if(!whichStr->compareIgnoreCase("adler32"))
+    if(!whichStr->compareIgnoreCase("adler32"))
         return new Mod::HashCarrier<Mod::Adler32>();
+    else if(!whichStr->compareIgnoreCase("crc32"))
+        return new Mod::HashCarrier<Mod::CRC32>();
     else if(!whichStr->compareIgnoreCase("md2"))
         return new Mod::HashCarrier<Mod::MD2Hash>();
     else if(!whichStr->compareIgnoreCase("md4"))
@@ -68,10 +68,8 @@ FalconData *GetHashByName(String *whichStr)
         return new Mod::HashCarrier<Mod::SHA384Hash>();
     else if(!whichStr->compareIgnoreCase("sha512"))
         return new Mod::HashCarrier<Mod::SHA512Hash>();
-    else if(!whichStr->compareIgnoreCase("tiger"))
-        return new Mod::HashCarrier<Mod::TigerHash>();
-    else if(!whichStr->compareIgnoreCase("whirlpool"))
-        return new Mod::HashCarrier<Mod::WhirlpoolHash>();
+    else if(!whichStr->compareIgnoreCase("siphash"))
+        return new Mod::HashCarrier<Mod::SipHash>();
     else if(!whichStr->compareIgnoreCase("ripemd128"))
         return new Mod::HashCarrier<Mod::RIPEMD128Hash>();
     else if(!whichStr->compareIgnoreCase("ripemd160"))
@@ -80,6 +78,10 @@ FalconData *GetHashByName(String *whichStr)
         return new Mod::HashCarrier<Mod::RIPEMD256Hash>();
     else if(!whichStr->compareIgnoreCase("ripemd320"))
         return new Mod::HashCarrier<Mod::RIPEMD320Hash>();
+    else if(!whichStr->compareIgnoreCase("tiger"))
+        return new Mod::HashCarrier<Mod::TigerHash>();
+    else if(!whichStr->compareIgnoreCase("whirlpool"))
+        return new Mod::HashCarrier<Mod::WhirlpoolHash>();
 
     // note: when adding entries here, be sure to overload the hash's GetName() method accordingly!
 
@@ -324,6 +326,13 @@ void CRC32::UpdateData( const byte *ptr, uint32 size)
     }
 }
 
+
+/*
+ *
+ * Adler32
+ *
+ */
+
 Adler32::Adler32()
 : _adler(1)
 {
@@ -349,6 +358,184 @@ void Adler32::UpdateData( const byte *ptr, uint32 size)
     _adler = adler32(_adler, (char*)ptr, size);
 }
 
+/*
+ *
+ * MD2
+ *
+ */
+
+MD2Hash::MD2Hash()
+{
+    _finalized = false;
+    md2_init(&_ctx);
+}
+
+MD2Hash::~MD2Hash()
+{}
+
+
+void MD2Hash::UpdateData(const byte *ptr, uint32 size)
+{
+    md2_update(&_ctx, ptr, size);
+}
+
+void MD2Hash::Finalize(void)
+{
+    if(_finalized)
+        return;
+
+    _finalized = true;
+    md2_digest(&_ctx, _digest);
+}
+
+/*
+ *
+ * MD4
+ *
+ */
+
+MD4Hash::MD4Hash()
+{
+    _finalized = false;
+    MD4Init(&_ctx);
+}
+
+MD4Hash::~MD4Hash()
+{}
+
+void MD4Hash::UpdateData(const byte *ptr, uint32 size)
+{
+    MD4Update(&_ctx, ptr, size);
+}
+
+void MD4Hash::Finalize(void)
+{
+    if(_finalized)
+        return;
+
+    _finalized = true;
+    MD4Final(&_ctx, _digest);
+}
+
+/*
+ *
+ * MD5
+ *
+ */
+
+MD5Hash::MD5Hash()
+{
+    _finalized = false;
+    md5_init(&_ctx);
+}
+
+MD5Hash::~MD5Hash()
+{}
+
+void MD5Hash::UpdateData(const byte *ptr, uint32 size)
+{
+    md5_append(&_ctx, ptr, size);
+}
+
+void MD5Hash::Finalize(void)
+{
+    if(_finalized)
+        return;
+
+    _finalized = true;
+    md5_finish(&_ctx, _digest);
+}
+
+/*
+ *
+ * RIPEMD
+ *
+ */
+
+RIPEMDHashBase::~RIPEMDHashBase()
+{}
+
+void RIPEMDHashBase::UpdateData(const byte *ptr, uint32 size)
+{
+    ripemd_update(&_ctx, ptr, size);
+}
+
+void RIPEMDHashBase::Finalize(void)
+{
+    if(_finalized)
+        return;
+
+    ripemd_final(&_ctx);
+    ripemd_digest(&_ctx, &_digest[0]);
+    _finalized = true;
+}
+
+/*
+ *
+ * RIPEMD128
+ *
+ */
+
+RIPEMD128Hash::RIPEMD128Hash()
+{
+    _finalized = false;
+    ripemd128_init(&_ctx);
+}
+
+RIPEMD128Hash::~RIPEMD128Hash()
+{}
+
+/*
+ *
+ * RIPEMD160
+ *
+ */
+
+RIPEMD160Hash::RIPEMD160Hash()
+{
+    _finalized = false;
+    ripemd160_init(&_ctx);
+}
+
+RIPEMD160Hash::~RIPEMD160Hash()
+{}
+
+/*
+ *
+ * RIPEMD256
+ *
+ */
+
+RIPEMD256Hash::RIPEMD256Hash()
+{
+    _finalized = false;
+    ripemd256_init(&_ctx);
+}
+
+RIPEMD256Hash::~RIPEMD256Hash()
+{}
+
+/*
+ *
+ * RIPEMD320
+ *
+ */
+
+RIPEMD320Hash::RIPEMD320Hash()
+{
+    _finalized = false;
+    ripemd320_init(&_ctx);
+}
+
+RIPEMD320Hash::~RIPEMD320Hash()
+{}
+
+/*
+ *
+ * SHA1
+ *
+ */
+
 SHA1Hash::SHA1Hash()
 {
     _finalized = false;
@@ -357,7 +544,6 @@ SHA1Hash::SHA1Hash()
 
 SHA1Hash::~SHA1Hash()
 {}
-
 
 void SHA1Hash::UpdateData(const byte *ptr, uint32 size)
 {
@@ -373,6 +559,12 @@ void SHA1Hash::Finalize(void)
     sha_digest(&_ctx, &_digest[0]);
     _finalized = true;
 }
+
+/*
+ *
+ * SHA224
+ *
+ */
 
 SHA224Hash::SHA224Hash()
 {
@@ -399,6 +591,12 @@ void SHA224Hash::Finalize(void)
     _finalized = true;
 }
 
+/*
+ *
+ * SHA256
+ *
+ */
+
 SHA256Hash::SHA256Hash()
 {
     _finalized = false;
@@ -407,7 +605,6 @@ SHA256Hash::SHA256Hash()
 
 SHA256Hash::~SHA256Hash()
 {}
-
 
 void SHA256Hash::UpdateData(const byte *ptr, uint32 size)
 {
@@ -423,6 +620,12 @@ void SHA256Hash::Finalize(void)
     sha256_digest(&_ctx, &_digest[0]);
     _finalized = true;
 }
+
+/*
+ *
+ * SHA384
+ *
+ */
 
 SHA384Hash::SHA384Hash()
 {
@@ -448,6 +651,12 @@ void SHA384Hash::Finalize(void)
     _finalized = true;
 }
 
+/*
+ *
+ * SHA512
+ *
+ */
+
 SHA512Hash::SHA512Hash()
 {
     _finalized = false;
@@ -472,100 +681,41 @@ void SHA512Hash::Finalize(void)
     _finalized = true;
 }
 
-MD2Hash::MD2Hash()
+/*
+ *
+ * Siphash
+ *
+ */
+
+SipHash::SipHash()
 {
     _finalized = false;
-    md2_init(&_ctx);
+    int_sip_init(&_ctx);
 }
 
-MD2Hash::~MD2Hash()
+SipHash::~SipHash()
 {}
 
-
-void MD2Hash::UpdateData(const byte *ptr, uint32 size)
+void SipHash::UpdateData(const byte *ptr, uint32 size)
 {
-    md2_update(&_ctx, ptr, size);
+    int_sip_update(&_ctx, ptr, size);
 }
 
-void MD2Hash::Finalize(void)
+void SipHash::Finalize(void)
 {
     if(_finalized)
         return;
 
+    int_sip_final(&_ctx);
+    sip_hash_digest(&_ctx, &_digest[0]);
     _finalized = true;
-    md2_digest(&_ctx, _digest);
 }
 
-MD4Hash::MD4Hash()
-{
-    _finalized = false;
-    MD4Init(&_ctx);
-}
-
-MD4Hash::~MD4Hash()
-{}
-
-void MD4Hash::UpdateData(const byte *ptr, uint32 size)
-{
-    MD4Update(&_ctx, ptr, size);
-}
-
-void MD4Hash::Finalize(void)
-{
-    if(_finalized)
-        return;
-
-    _finalized = true;
-    MD4Final(&_ctx, _digest);
-}
-
-MD5Hash::MD5Hash()
-{
-    _finalized = false;
-    md5_init(&_ctx);
-}
-
-MD5Hash::~MD5Hash()
-{}
-
-void MD5Hash::UpdateData(const byte *ptr, uint32 size)
-{
-    md5_append(&_ctx, ptr, size);
-}
-
-void MD5Hash::Finalize(void)
-{
-    if(_finalized)
-        return;
-
-    _finalized = true;
-    md5_finish(&_ctx, _digest);
-}
-
-WhirlpoolHash::WhirlpoolHash()
-{
-    _finalized = false;
-    whirlpool_init(&_ctx);
-}
-
-
-WhirlpoolHash::~WhirlpoolHash()
-{}
-
-
-void WhirlpoolHash::UpdateData(const byte *ptr, uint32 size)
-{
-    whirlpool_update(ptr, size * 8, &_ctx); // whirlpool expects size in bits
-}
-
-void WhirlpoolHash::Finalize(void)
-{
-    if(_finalized)
-        return;
-
-    _finalized = true;
-    whirlpool_finalize(&_ctx, _digest);
-}
+/*
+ *
+ * Tiger
+ *
+ */
 
 TigerHash::TigerHash()
 {
@@ -591,65 +741,39 @@ void TigerHash::Finalize(void)
     tiger_digest(&_ctx, _digest);
 }
 
+/*
+ *
+ * Whirlpool
+ *
+ */
 
-RIPEMDHashBase::~RIPEMDHashBase()
-{}
-
-
-void RIPEMDHashBase::UpdateData(const byte *ptr, uint32 size)
+WhirlpoolHash::WhirlpoolHash()
 {
-    ripemd_update(&_ctx, ptr, size);
+    _finalized = false;
+    whirlpool_init(&_ctx);
 }
 
-void RIPEMDHashBase::Finalize(void)
+
+WhirlpoolHash::~WhirlpoolHash()
+{}
+
+void WhirlpoolHash::UpdateData(const byte *ptr, uint32 size)
+{
+    whirlpool_update(ptr, size * 8, &_ctx); // whirlpool expects size in bits
+}
+
+void WhirlpoolHash::Finalize(void)
 {
     if(_finalized)
         return;
 
-    ripemd_final(&_ctx);
-    ripemd_digest(&_ctx, &_digest[0]);
     _finalized = true;
+    whirlpool_finalize(&_ctx, _digest);
 }
 
-RIPEMD128Hash::RIPEMD128Hash()
-{
-    _finalized = false;
-    ripemd128_init(&_ctx);
-}
-
-RIPEMD128Hash::~RIPEMD128Hash()
-{}
-
-RIPEMD160Hash::RIPEMD160Hash()
-{
-    _finalized = false;
-    ripemd160_init(&_ctx);
-}
-
-RIPEMD160Hash::~RIPEMD160Hash()
-{}
-
-RIPEMD256Hash::RIPEMD256Hash()
-{
-    _finalized = false;
-    ripemd256_init(&_ctx);
-}
-
-RIPEMD256Hash::~RIPEMD256Hash()
-{}
-
-RIPEMD320Hash::RIPEMD320Hash()
-{
-    _finalized = false;
-    ripemd320_init(&_ctx);
-}
-
-RIPEMD320Hash::~RIPEMD320Hash()
-{}
 
 
 }
 }
-
 
 /* end of hash_mod.cpp */

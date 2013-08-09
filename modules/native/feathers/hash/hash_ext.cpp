@@ -61,22 +61,23 @@ This function can be used to check if different versions of the module support a
 FALCON_FUNC Func_GetSupportedHashes( ::Falcon::VMachine *vm )
 {
     CoreArray *arr = new CoreArray(16);
-    arr->append(new CoreString("CRC32"));
     arr->append(new CoreString("Adler32"));
+    arr->append(new CoreString("CRC32"));
+    arr->append(new CoreString("MD2"));
+    arr->append(new CoreString("MD4"));
+    arr->append(new CoreString("MD5"));
     arr->append(new CoreString("SHA1"));
     arr->append(new CoreString("SHA224"));
     arr->append(new CoreString("SHA256"));
     arr->append(new CoreString("SHA384"));
     arr->append(new CoreString("SHA512"));
-    arr->append(new CoreString("MD2"));
-    arr->append(new CoreString("MD4"));
-    arr->append(new CoreString("MD5"));
-    arr->append(new CoreString("Tiger"));
-    arr->append(new CoreString("Whirlpool"));
+    arr->append(new CoreString("SIPHASH"));
     arr->append(new CoreString("RIPEMD128"));
     arr->append(new CoreString("RIPEMD160"));
     arr->append(new CoreString("RIPEMD256"));
     arr->append(new CoreString("RIPEMD320"));
+    arr->append(new CoreString("Tiger"));
+    arr->append(new CoreString("Whirlpool"));
     vm->retval(arr);
 }
 
@@ -105,10 +106,10 @@ FALCON_FUNC Func_hash( ::Falcon::VMachine *vm )
         throw new ParamError( ErrorParam( e_inv_params, __LINE__ )
             .origin( e_orig_mod ).extra( "B, X, [, X...]" ) );
     }
-    
+
     bool raw = vm->param(0)->asBoolean();
     Item which = *(vm->param(1));
-    
+
     Mod::HashCarrier<Mod::HashBase> *carrier = NULL;
 
     while(which.isCallable())
@@ -187,7 +188,7 @@ FALCON_FUNC Func_makeHash( ::Falcon::VMachine *vm )
         throw new ParamError( ErrorParam( e_inv_params, __LINE__ )
             .origin( e_orig_mod ).extra( "S" ) );
     }
-    
+
     String *name = vm->param(0)->asString();
     bool silent =  vm->paramCount() > 1 && vm->param(1)->asBoolean();
     FalconData *fdata = Mod::GetHashByName(name);
@@ -304,7 +305,7 @@ FALCON_FUNC Func_hmac( ::Falcon::VMachine *vm )
             String *str = i_key->asString();
             byteCount = str->size();
         }
-        
+
         if(byteCount > blocksize) // key too large? hash it, so the resulting size will be equal to blocksize
         {
             if(i_key->isString())
@@ -321,7 +322,7 @@ FALCON_FUNC Func_hmac( ::Falcon::VMachine *vm )
                memset(i_key_pad + digestSize, 0, blocksize - digestSize);
                memset(o_key_pad + digestSize, 0, blocksize - digestSize);
             }
-            
+
         }
         else if(byteCount <= blocksize) // key too small? if the key has exactly blocksize bytes we can go this way too
         {
